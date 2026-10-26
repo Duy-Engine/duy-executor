@@ -4,7 +4,7 @@ prim_param concept str
 prim_ret _r
 # 罗马数字→整数（原件 = TheAlgorithms/Python conversions/roman_numerals.py roman_to_int·MIT）
 # 语义：v[i] < v[i+1] ⇒ total += v1-v0·i+=2；否则 total += v0·i+=1（减法前缀规则）
-# 码点映射内联（I=73→1 V=86→5 X=88→10 L=76→50 C=67→100 D=68→500 M=77→1000·哨兵 0→48→0）
+# 码点映射乘法门（I=73→1 V=86→5 X=88→10 L=76→50 C=67→100 D=68→500 M=77→1000）；未命中全 0＝越界哨兵
 # 中间变量一律局部槽 _ 前缀·结果写 result 记忆
 str_cat a='$concept' out_concept='rm_in'
 str_len concept='rm_in' out='_n'
@@ -14,71 +14,13 @@ if cond='_n > 0'
 body_open
 while until='_i >= _n'
 body_open
-str_num n='0' out_concept='rm_c0'
-str_num n='0' out_concept='rm_c1'
 str_slice from_concept='rm_in' start='_i' len='1' out_concept='rm_c0' out='_s0'
 eval_expr src='_i + 1' out='_i1'
 str_slice from_concept='rm_in' start='_i1' len='1' out_concept='rm_c1' out='_s1'
 str_ord from_concept='rm_c0' out='_o0'
-eval_expr src='0' out='_v0'
-if cond='_o0 == 73'
-body_open
-eval_expr src='1' out='_v0'
-body_close
-if cond='_o0 == 86'
-body_open
-eval_expr src='5' out='_v0'
-body_close
-if cond='_o0 == 88'
-body_open
-eval_expr src='10' out='_v0'
-body_close
-if cond='_o0 == 76'
-body_open
-eval_expr src='50' out='_v0'
-body_close
-if cond='_o0 == 67'
-body_open
-eval_expr src='100' out='_v0'
-body_close
-if cond='_o0 == 68'
-body_open
-eval_expr src='500' out='_v0'
-body_close
-if cond='_o0 == 77'
-body_open
-eval_expr src='1000' out='_v0'
-body_close
+eval_expr src='(_o0==73)*1+(_o0==86)*5+(_o0==88)*10+(_o0==76)*50+(_o0==67)*100+(_o0==68)*500+(_o0==77)*1000' out='_v0'
 str_ord from_concept='rm_c1' out='_o1'
-eval_expr src='0' out='_v1'
-if cond='_o1 == 73'
-body_open
-eval_expr src='1' out='_v1'
-body_close
-if cond='_o1 == 86'
-body_open
-eval_expr src='5' out='_v1'
-body_close
-if cond='_o1 == 88'
-body_open
-eval_expr src='10' out='_v1'
-body_close
-if cond='_o1 == 76'
-body_open
-eval_expr src='50' out='_v1'
-body_close
-if cond='_o1 == 67'
-body_open
-eval_expr src='100' out='_v1'
-body_close
-if cond='_o1 == 68'
-body_open
-eval_expr src='500' out='_v1'
-body_close
-if cond='_o1 == 77'
-body_open
-eval_expr src='1000' out='_v1'
-body_close
+eval_expr src='(_o1==73)*1+(_o1==86)*5+(_o1==88)*10+(_o1==76)*50+(_o1==67)*100+(_o1==68)*500+(_o1==77)*1000' out='_v1'
 if cond='_v0 < _v1'
 body_open
 eval_expr src='_total + _v1 - _v0' out='_total'
