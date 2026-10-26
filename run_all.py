@@ -12,7 +12,7 @@
 
   · cases.tsv 第一列是输入。单参数组件直接取用；多参数组件按空格分隔，
     依 prim_param 声明序绑定（num 转数值、str 原样）。
-  · 结果写入记忆概念 `rt`（2 字·引擎长词折扣安全）：有 text 比文本，有 val 比数值。
+  · 结果写入记忆概念 `result`：有 text 比文本，有 val 比数值。
 """
 import glob
 import os
@@ -23,7 +23,7 @@ sys.path.insert(0, BASE)
 from duy_exec import parse_program, run_file, DuyError  # noqa: E402
 
 NULL = "\\N"
-RESULT_CONCEPT = "rt"
+RESULT_CONCEPT = "result"
 
 
 def demo_dirs(only=None):

@@ -91,5 +91,4 @@ eval_expr src='_i + 1' out='_i'
 body_close
 body_close
 body_close
-str_num n='0' out_concept='result'
-write_mem type='knowledge' concept='rt' val='$_total' out='_r'
+write_mem type='knowledge' concept='result' val='$_total' out='_r'
