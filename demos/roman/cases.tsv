@@ -1,0 +1,11 @@
+# 用例表：输入 <TAB> 期望 <TAB> 来源
+# 前 5 条逐字来自原件 roman_to_int 的 doctest
+III	3	原件 doctest
+CLIV	154	原件 doctest
+MIX	1009	原件 doctest
+MMD	2500	原件 doctest
+MMMCMXCIX	3999	原件 doctest
+I	1	本仓边界
+MMXXIV	2024	本仓边界
+IX	9	本仓边界
+XC	90	本仓边界

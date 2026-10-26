@@ -1,0 +1,36 @@
+prim_key CHAR_VAL
+prim_scope per_unit
+prim_param o num
+prim_ret _v
+# 单罗马字符码点 → 数值（I=73→1 V=86→5 X=88→10 L=76→50 C=67→100 D=68→500 M=77→1000）
+# 哨兵 '0'（ord=48）与其他字符 → 0
+eval_expr src='$o' out='_v'
+if cond='_o == 73'
+body_open
+eval_expr src='1' out='_v'
+body_close
+if cond='_o == 86'
+body_open
+eval_expr src='5' out='_v'
+body_close
+if cond='_o == 88'
+body_open
+eval_expr src='10' out='_v'
+body_close
+if cond='_o == 76'
+body_open
+eval_expr src='50' out='_v'
+body_close
+if cond='_o == 67'
+body_open
+eval_expr src='100' out='_v'
+body_close
+if cond='_o == 68'
+body_open
+eval_expr src='500' out='_v'
+body_close
+if cond='_o == 77'
+body_open
+eval_expr src='1000' out='_v'
+body_close
+
