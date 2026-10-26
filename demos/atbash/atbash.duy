@@ -1,0 +1,32 @@
+# 重构件：Atbash 替换密码（原件 = original/atbash.py 的 atbash_slow）
+# 语义对齐：A-Z → 155-c，a-z → 219-c，其余原样
+# 独语无分支表达式 ⇒ 用乘法当布尔门：(_a>=65)*(_a<=90) 取 1/0
+# while 是 do-while（先跑体再判 until）⇒ 空输入必须前置守卫
+
+prim_key ATBASH
+prim_scope per_unit
+prim_ret _r
+prim_param concept str
+
+# 字符串只能进记忆；写文本必须走 str_cat
+str_cat a='$concept' out_concept='in'
+str_len concept='in' out='_n'
+eval_expr src='0' out='_i'
+str_cat a='' out_concept='acc'
+
+if cond='_n > 0'
+body_open
+while until='_i >= _n'
+body_open
+str_slice from_concept='in' start='_i' len='1' out_concept='c'
+str_ord from_concept='c' out='_a'
+# 三段合一：大写段 + 小写段 + 原样
+eval_expr src='_a + (155 - 2 * _a) * ((_a >= 65) * (_a <= 90)) + (219 - 2 * _a) * ((_a >= 97) * (_a <= 122))' out='_b'
+str_chr n='_b' out_concept='d'
+str_cat from_a='acc' from_b='d' out_concept='acc'
+eval_expr src='_i + 1' out='_i'
+body_close
+body_close
+
+# 回执步（写类）：result = acc
+str_cat from_a='acc' out_concept='result' out='_r'

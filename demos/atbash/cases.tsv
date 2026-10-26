@@ -1,0 +1,11 @@
+# 用例表：输入 <TAB> 期望输出 <TAB> 来源
+# \N = 空串；# 开头为注释
+# 前两条来自原件 doctest（original/atbash.py，原作者定，带 CI 校验）
+ABCDEFG	ZYXWVUT	原件 doctest #1
+aW;;123BX	zD;;123YC	原件 doctest #2
+# 以下为本仓补的边界（原件无对应 doctest）
+\N	\N	边界：空输入（触发 do-while 守卫路径）
+a	z	边界：小写单字符
+Z	A	边界：大写边界
+@#1	@#1	边界：全非字母，应原样
+AaZz	ZzAa	边界：大小写混合 + 首尾

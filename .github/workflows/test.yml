@@ -1,0 +1,31 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: py${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: 全部演示用例
+        run: python run_all.py
+
+      - name: 原件 doctest（各演示的判据有效性）
+        run: |
+          for f in demos/*/original/*.py; do
+            echo "== $f"
+            python -m doctest "$f" -v
+          done
