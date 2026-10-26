@@ -66,7 +66,9 @@ def run_demo(d):
     for inp, exp, ln in cases:
         try:
             _, m = run_file(duy, key, {INPUT_PARAM: inp})
-            got = m.mem_text(RESULT_CONCEPT).decode("ascii", "replace")
+            if not m.has_concept(RESULT_CONCEPT):
+                raise DuyError("组件未写 %s 概念（与「写了空」不同）" % RESULT_CONCEPT)
+            got = m.mem_text(RESULT_CONCEPT).decode("utf-8", "replace")
         except DuyError as e:
             print("  ERROR  line %-3d %-16r %s" % (ln, inp, e))
             fail += 1

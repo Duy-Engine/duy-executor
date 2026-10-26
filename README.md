@@ -4,17 +4,18 @@
 
 独语（`.duy`）行式组件的**零依赖执行器**，以及一组「外部实现 → 重构件」的对照演示。
 
-每个演示都取一份**公开的原件**，用**原作者写的判据**验证重构结果——判据不在本仓手里，也不需要信任作者本人。
+每个演示都取一份**公开的原件**：锚点用例逐字来自原件 doctest，边界用例由本仓补充并在用例表里标注来源。
 
 ## 演示
 
 | 演示 | 原件 | 判据 | 结果 |
 |---|---|---|---|
-| [atbash](demos/atbash/) | [TheAlgorithms/Python](https://github.com/TheAlgorithms/Python) `ciphers/atbash.py`（MIT） | 原作者 doctest ×2 + 边界 ×5 | **7/7** |
+| [atbash](demos/atbash/) | [TheAlgorithms/Python](https://github.com/TheAlgorithms/Python) `ciphers/atbash.py`（MIT） | 上游 doctest ×2 + 本仓边界 ×5 | **7/7** |
 
 ## 快速开始
 
 ```bash
+python tests/unit.py            # 执行器单测（41 条，逐算子）
 python run_all.py               # 跑全部演示
 python run_all.py atbash        # 只跑一个
 python duy_exec.py demos/atbash/atbash.duy ATBASH concept=ABCDEFG    # 单条
@@ -51,13 +52,17 @@ demos/<name>/
 
 共 **18 个**。**不支持**（超出即报错并点名）：依赖运行环境的算子——`measure` / `mem_exec` / `attack` / `unit_foreach` / `seg_call` / `verify_lib` 等。
 
-## 语义口径（与实现必须一致的五条）
+格式与边界语义的完整说明见 [`docs/format.md`](docs/format.md)。
+
+## 语义口径（五条高频坑）
+
+完整边界语义（除零、负索引、空串、`stop` 嵌套行为等）见 [`docs/format.md`](docs/format.md) 第八节。
 
 写好 `.duy` 之前先看这五条，都是踩过的：
 
 1. **取模 = `fmod`**，保被除数符号。Python 原生 `%` 是 floor 语义，直接照搬会错。
 2. **`while` 是 do-while**：先跑 body 再判 `until`（`>0` 停）。**空/零边界必须前置守卫**，否则体至少跑一轮。
-3. **文本是字节序列**，不是码点。内部一律 `bytes`。
+3. **文本是 UTF-8 字节序列**，不是码点。中文 3 字节/字，所有文本算子按字节工作、切片落在字节边界。
 4. **参数类型两种写法要归一化**：契约写 `s/n/a/e`，实际文件写 `str/num/expr/arr`。
 5. **字段值的引号决定类型**：`val=10` 是数值，`val='10'` 是字符串（会写成文本记忆）。`n` 类字段必须写裸数字；`e` 类字段才是带引号的表达式。
 

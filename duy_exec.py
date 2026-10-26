@@ -66,13 +66,24 @@ class Comp(object):
         self.steps = []
 
 
+def strip_comment(line):
+    """剥离注释（# 到行尾）。引号内的 # 属于字面量，不是注释。"""
+    quoted = False
+    for i, ch in enumerate(line):
+        if ch == "'":
+            quoted = not quoted
+        elif ch == "#" and not quoted:
+            return line[:i]
+    return line
+
+
 def parse_program(text):
     """文本 → {key: Comp}。body_open/body_close 驱动嵌套栈，缩进无意义。"""
     comps = {}
     cur = None
     stack = None
     for raw in text.splitlines():
-        line = raw.split("#", 1)[0].strip()
+        line = strip_comment(raw).strip()
         if not line:
             continue
         if line.startswith("prim_key"):
@@ -80,6 +91,8 @@ def parse_program(text):
             if len(parts) < 2:
                 raise DuyError("prim_key 缺名字")
             cur = Comp(parts[1])
+            if cur.key in comps:
+                raise DuyError("重复的 prim_key：%s（同名组件会互相覆盖，拒绝装载）" % cur.key)
             comps[cur.key] = cur
             stack = [cur.steps]
             continue
@@ -356,6 +369,10 @@ class Machine(object):
             return b""
         return e["text"]
 
+    def has_concept(self, concept):
+        """概念是否存在（用于区分「写了空」与「从未写」）。"""
+        return any(c == concept for (_t, c) in self.mem)
+
     def mem_set(self, concept, mtype="text", val=None, text=None, decay=0.5):
         self.mem[(mtype, concept)] = {"val": val, "text": text, "decay": decay}
 
@@ -463,7 +480,7 @@ class Machine(object):
                     if isinstance(pval, (bytes, bytearray)):
                         text = bytes(pval)
                     elif ptype == "s":
-                        text = str(pval).encode("ascii", "replace")
+                        text = str(pval).encode("utf-8", "replace")
                     else:
                         val = float(pval)
                 elif key in self.slots:
@@ -473,7 +490,7 @@ class Machine(object):
                     else:
                         val = float(sv)
                 else:
-                    text = nm.encode("ascii", "replace")
+                    text = nm.encode("utf-8", "replace")
         self.mem_set(concept, mtype, val=val, text=text, decay=decay)
         out = self.fstr(st, "out")
         if out:
@@ -506,7 +523,7 @@ class Machine(object):
             hay = self.mem_text(fc)
         else:
             a = self.fstr(st, "a")
-            hay = a.encode("ascii") if a is not None else b""
+            hay = a.encode("utf-8") if a is not None else b""
         start = int(self.fexpr(st, "start", 0.0))
         ln = int(self.fexpr(st, "len", 0.0))
         piece = hay[start:start + ln] if ln >= 0 else b""
@@ -528,13 +545,13 @@ class Machine(object):
         needle = self.fstr(st, "rb")
         if needle is None:
             a = self.fstr(st, "a")
-            needle = a.encode("ascii") if a is not None else b""
+            needle = a.encode("utf-8") if a is not None else b""
         else:
             needle = self.get_slot(needle)
         if not isinstance(hay, (bytes, bytearray)):
-            hay = str(hay).encode("ascii")
+            hay = str(hay).encode("utf-8")
         if not isinstance(needle, (bytes, bytearray)):
-            needle = str(needle).encode("ascii")
+            needle = str(needle).encode("utf-8")
         out = self.fstr(st, "out")
         if out:
             self.set_slot(out, float(hay.find(bytes(needle))))
@@ -543,7 +560,7 @@ class Machine(object):
     def op_str_ord(self, st):
         fc = self.fstr(st, "from_concept")
         a = self.fstr(st, "a")
-        data = self.mem_text(fc) if fc else (a.encode("ascii") if a is not None else b"")
+        data = self.mem_text(fc) if fc else (a.encode("utf-8") if a is not None else b"")
         out = self.fstr(st, "out")
         if out:
             self.set_slot(out, float(data[0]) if data else 0.0)
@@ -551,7 +568,8 @@ class Machine(object):
 
     def op_str_chr(self, st):
         n = int(self.fexpr(st, "n", 0.0))
-        n &= 0xFF
+        if n < 0 or n > 255:
+            n = 0            # 超界归 0（不是取模）
         ch = bytes([n])
         ro = self.fstr(st, "ro")
         oc = self.fstr(st, "out_concept")
@@ -570,7 +588,7 @@ class Machine(object):
         s = prefix + ("%d" % int(n) if n == int(n) else "%.6g" % n)
         oc = self.fstr(st, "out_concept")
         if oc:
-            self.mem_set(oc, "text", text=s.encode("ascii"))
+            self.mem_set(oc, "text", text=s.encode("utf-8"))
         out = self.fstr(st, "out")
         if out:
             self.set_slot(out, float(len(s)))
@@ -584,9 +602,9 @@ class Machine(object):
         if lit.startswith("$"):
             nm = lit[1:]
             if nm in self.params and self.params[nm][0] == "s":
-                return str(self.params[nm][1]).encode("ascii", "replace")
+                return str(self.params[nm][1]).encode("utf-8", "replace")
             raise DuyError("字段 %s 引用了非 str 形参 %r" % (key, lit))
-        return lit.encode("ascii", "replace")
+        return lit.encode("utf-8", "replace")
 
     def op_str_cat(self, st):
         parts = []
@@ -606,12 +624,22 @@ class Machine(object):
         return None
 
     def op_str_eq(self, st):
-        left = self.fstr(st, "ra")
-        left = self.get_slot(left) if left else b""
-        right = self.fstr(st, "a") or ""
+        """左 = ra 槽 | from_concept 记忆；右 = a 字面或 $str 参数（与其它文本算子一致）。"""
+        ra = self.fstr(st, "ra")
+        fc = self.fstr(st, "from_concept")
+        if ra:
+            v = self.get_slot(ra)
+            if not isinstance(v, (bytes, bytearray)):
+                raise DuyError("str_eq 的 ra 槽 %r 不是文本（是数值）" % ra)
+            left = bytes(v)
+        elif fc:
+            left = self.mem_text(fc)
+        else:
+            raise DuyError("str_eq 需要 ra（槽）或 from_concept（记忆）作左操作数")
+        right = self._lit_or_param(st, "a")
         out = self.fstr(st, "out")
         if out:
-            self.set_slot(out, 1.0 if bytes(left) == right.encode("ascii") else 0.0)
+            self.set_slot(out, 1.0 if left == right else 0.0)
         return None
 
     # --- 控制 ---
@@ -678,7 +706,7 @@ def main(argv):
         sys.stderr.write("DUY ERROR: %s\n" % e)
         return 1
     if isinstance(ret, bytes):
-        print(ret.decode("ascii", "replace"))
+        print(ret.decode("utf-8", "replace"))
     elif ret is None:
         print("")
     else:

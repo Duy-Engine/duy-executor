@@ -20,6 +20,9 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
+      - name: 执行器单测（逐算子）
+        run: python tests/unit.py
+
       - name: 全部演示用例
         run: python run_all.py
 
