@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""跑 demos/*/ 下的全部用例。
+"""跑 demos/*/ 全部判据（执行器 = duy_mini.exe，Windows x64 产物）。
 
 新增一个演示只需两个文件（无需改代码）：
 
@@ -10,29 +10,28 @@
 
 约定：
 
-  · cases.tsv 第一列是输入。单参数组件直接取用；多参数组件按空格分隔，
-    依 prim_param 声明序绑定（num 转数值、str 原样）。
-  · 结果写入记忆概念 `result`：有 text 比文本，有 val 比数值。
+  · 组件唯一形参名为 concept（str 类型），cases.tsv 第一列即其输入。
+  · 结果写入记忆概念 `rt`：有 text 比文本，有 val 比数值。
+  · 空文本结果不落库 ⇒ 无该概念记忆且回执为 0，即空串。
 """
 import glob
+import json
 import os
+import subprocess
 import sys
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, BASE)
-from duy_exec import parse_program, run_file, DuyError  # noqa: E402
-
+EXE = os.path.join(BASE, "duy_mini.exe")
 NULL = "\\N"
-RESULT_CONCEPT = "result"
+RESULT_CONCEPT = "rt"
 
 
-def demo_dirs(only=None):
-    dirs = sorted(d for d in glob.glob(os.path.join(BASE, "demos", "*")) if os.path.isdir(d))
-    if only:
-        dirs = [d for d in dirs if os.path.basename(d) == only]
-        if not dirs:
-            raise SystemExit("找不到演示目录：demos/%s" % only)
-    return dirs
+def component_key(duy):
+    with open(duy, encoding="utf-8-sig") as f:
+        for line in f:
+            if line.startswith("prim_key"):
+                return line.split()[1]
+    raise SystemExit("%s 缺 prim_key" % duy)
 
 
 def load_cases(path):
@@ -50,31 +49,17 @@ def load_cases(path):
     return rows
 
 
-def bind_args(comp, raw):
-    """按 prim_param 声明序绑定输入。单参数直接取用，多参数按空格拆分。"""
-    ps = comp.params
-    if not ps:
-        return {}
-    if len(ps) == 1:
-        nm, t = ps[0]
-        return {nm: raw if t == "s" else float(raw)}
-    parts = raw.split()
-    if len(parts) != len(ps):
-        raise DuyError("输入 %r 需要 %d 个参数，实得 %d" % (raw, len(ps), len(parts)))
-    return {nm: (v if t == "s" else float(v)) for (nm, t), v in zip(ps, parts)}
-
-
-def read_result(m):
-    """读 result 概念：优先文本，其次数值。"""
-    e = m.mem_get(RESULT_CONCEPT)
-    if e is None:
-        raise DuyError("组件未写 %s 概念（与「写了空」不同）" % RESULT_CONCEPT)
-    if e.get("text") is not None:
-        return e["text"].decode("utf-8", "replace")
-    if e.get("val") is not None:
-        v = e["val"]
-        return ("%d" % int(v)) if v == int(v) else repr(v)
-    raise DuyError("%s 概念既无文本也无数值" % RESULT_CONCEPT)
+def read_result(out):
+    """产物口径判读：有 text 比文本，有 val 比数值；无文本记忆且回执 0 = 空文本结果。"""
+    for m in out["mem"]:
+        if m.get("concept") == RESULT_CONCEPT and m.get("text"):
+            return m["text"]
+    if out.get("ret_has"):
+        v = out["ret_value"]
+        if v == 0:
+            return ""
+        return "%d" % int(v) if v == int(v) else repr(v)
+    raise SystemExit("结果缺失：无 %s 记忆且无回执" % RESULT_CONCEPT)
 
 
 def run_demo(d):
@@ -83,36 +68,37 @@ def run_demo(d):
     if len(duys) != 1:
         raise SystemExit("demos/%s 需要恰好 1 个 .duy，实得 %d" % (name, len(duys)))
     duy = duys[0]
-    prog = parse_program(open(duy, encoding="utf-8-sig").read())
-    if len(prog) != 1:
-        raise SystemExit("demos/%s 的 .duy 需恰好 1 个组件，实得 %d" % (name, len(prog)))
-    key = next(iter(prog))
-    comp = prog[key]
+    key = component_key(duy)
     cases = load_cases(os.path.join(d, "cases.tsv"))
 
     print("== %s（组件 %s，%d 条用例）" % (name, key, len(cases)))
     ok = fail = 0
     for inp, exp, ln in cases:
-        try:
-            _, m = run_file(duy, key, bind_args(comp, inp))
-            got = read_result(m)
-        except DuyError as e:
-            print("  ERROR  line %-3d %-16r %s" % (ln, inp, e))
+        r = subprocess.run([EXE, duy, key, "concept=" + inp], capture_output=True)
+        if r.returncode != 0:
+            print("  ERROR  line %-3d %-16r %s"
+                  % (ln, inp, r.stderr.decode("utf-8", "replace").strip()))
             fail += 1
             continue
+        got = read_result(json.loads(r.stdout.decode("utf-8")))
         good = got == exp
         print("  %-4s  %-16r -> %-12r" % ("OK" if good else "FAIL", inp, got)
               + ("" if good else "  expect %r" % exp))
-        if good:
-            ok += 1
-        else:
-            fail += 1
+        ok, fail = ok + good, fail + (not good)
     return ok, fail
 
 
 def main():
+    if not os.path.isfile(EXE):
+        raise SystemExit("找不到 duy_mini.exe（Windows x64 执行器产物，应在本仓根目录）")
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     only = sys.argv[1] if len(sys.argv) > 1 else None
-    dirs = demo_dirs(only)
+    dirs = sorted(d for d in glob.glob(os.path.join(BASE, "demos", "*")) if os.path.isdir(d))
+    if only:
+        dirs = [d for d in dirs if os.path.basename(d) == only]
+        if not dirs:
+            raise SystemExit("找不到演示目录：demos/%s" % only)
     if not dirs:
         raise SystemExit("demos/ 下没有演示")
     total_ok = total_fail = 0

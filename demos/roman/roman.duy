@@ -5,7 +5,7 @@ prim_ret _r
 # 罗马数字→整数（原件 = TheAlgorithms/Python conversions/roman_numerals.py roman_to_int·MIT）
 # 语义：v[i] < v[i+1] ⇒ total += v1-v0·i+=2；否则 total += v0·i+=1（减法前缀规则）
 # 码点映射乘法门（I=73→1 V=86→5 X=88→10 L=76→50 C=67→100 D=68→500 M=77→1000）；未命中全 0＝越界哨兵
-# 中间变量一律局部槽 _ 前缀·结果写 result 记忆
+# 中间变量一律局部槽 _ 前缀·结果写 rt 记忆
 str_cat a='$concept' out_concept='rm_in'
 str_len concept='rm_in' out='_n'
 eval_expr src='0' out='_i'
@@ -33,4 +33,4 @@ eval_expr src='_i + 1' out='_i'
 body_close
 body_close
 body_close
-write_mem type='knowledge' concept='result' val='$_total' out='_r'
+write_mem type='knowledge' concept='rt' val='$_total' out='_r'

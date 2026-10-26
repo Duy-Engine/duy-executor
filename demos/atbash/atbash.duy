@@ -28,5 +28,5 @@ eval_expr src='_i + 1' out='_i'
 body_close
 body_close
 
-# 回执步（写类）：结果写 result 记忆（判据按此概念取值）
-str_cat from_a='acc' out_concept='result' out='_r'
+# 回执步（写类）：结果写 rt 记忆（判据按此概念取值）
+str_cat from_a='acc' out_concept='rt' out='_r'
