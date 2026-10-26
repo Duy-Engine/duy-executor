@@ -2,7 +2,7 @@
 
 [![test](https://github.com/Duy-Engine/duy-executor/actions/workflows/test.yml/badge.svg)](https://github.com/Duy-Engine/duy-executor/actions/workflows/test.yml)
 
-独语（`.duy`）行式组件的**零依赖执行器**，以及一组「外部实现 → 重构件」的对照演示。
+`.duy` 行式组件执行器（Windows 单文件 `duy_mini.exe`），以及一组「外部实现 → 重构件」的对照演示。
 
 每个演示都取一份**公开的原件**：锚点用例逐字来自原件 doctest，边界用例由本仓补充并在用例表里标注来源。
 
@@ -16,13 +16,19 @@
 ## 快速开始
 
 ```bash
-python tests/unit.py            # 执行器单测（41 条，逐算子）
-python run_all.py               # 跑全部演示
-python run_all.py atbash        # 只跑一个
-python duy_exec.py demos/atbash/atbash.duy ATBASH concept=ABCDEFG    # 单条
+python run_all.py                                             # 跑全部演示判据
+python run_all.py atbash                                      # 只跑一个
+duy_mini.exe demos/atbash/atbash.duy ATBASH concept=ABCDEFG   # 单条（输出 JSON 回执）
 ```
 
-CI 在 Python 3.9 / 3.12 两个版本上跑同一套用例（`.github/workflows/test.yml`）。
+CI 在 windows-latest 上跑同一套判据（`.github/workflows/test.yml`）。
+
+## 约定
+
+1. 组件唯一形参名为 `concept`（`str` 类型），对应 `cases.tsv` 第一列的输入
+2. 结果写入记忆概念 `rt`：有 text 比文本，有 val 比数值
+3. 空文本结果不落库：无该概念记忆且回执为 0，即空串
+4. 文本按 UTF-8 字节处理（中文 3 字节/字），切片落在字节边界
 
 ## 新增一个演示
 
@@ -35,43 +41,12 @@ demos/<name>/
 └── original/      原件存档（可选，不参与执行）
 ```
 
-约定三条：
-
-1. 组件唯一形参名为 `concept`（`str` 类型），对应 `cases.tsv` 第一列的输入
-2. 结果写入记忆概念 `result`：有 text 比文本，有 val 比数值
-3. 每个演示目录恰好一个 `.duy`、一个组件
-
-## 执行器支持范围
-
-| 类 | 算子 |
-|---|---|
-| 计算 | `eval_expr` `cond` `prob` |
-| 控制 | `if` `while` `stop` |
-| 文本 | `str_cat` `str_slice` `str_find` `str_ord` `str_num` `str_chr` `str_eq` `str_len` |
-| 变量 | `read_var` `write_var` |
-| 记忆 | `write_mem` `scale_mem`（纯内存，不落盘） |
-
-共 **18 个**。**不支持**（超出即报错并点名）：依赖运行环境的算子——`measure` / `mem_exec` / `attack` / `unit_foreach` / `seg_call` / `verify_lib` 等。
-
 格式与边界语义的完整说明见 [`docs/format.md`](docs/format.md)。
-
-## 语义口径（五条高频坑）
-
-完整边界语义（除零、负索引、空串、`stop` 嵌套行为等）见 [`docs/format.md`](docs/format.md) 第八节。
-
-写好 `.duy` 之前先看这五条，都是踩过的：
-
-1. **取模 = `fmod`**，保被除数符号。Python 原生 `%` 是 floor 语义，直接照搬会错。
-2. **`while` 是 do-while**：先跑 body 再判 `until`（`>0` 停）。**空/零边界必须前置守卫**，否则体至少跑一轮。
-3. **文本是 UTF-8 字节序列**，不是码点。中文 3 字节/字，所有文本算子按字节工作、切片落在字节边界。
-4. **参数类型两种写法要归一化**：契约写 `s/n/a/e`，实际文件写 `str/num/expr/arr`。
-5. **字段值的引号决定类型**：`val=10` 是数值，`val='10'` 是字符串（会写成文本记忆）。`n` 类字段必须写裸数字；`e` 类字段才是带引号的表达式。
 
 ## 边界
 
-- **本执行器是独立实现，不是唯一实现**。用例全部通过只说明「它符合这些用例」，不等于「它与其它实现逐字节等价」——后者未做。
-- **`prob` 是确定性替身**：用固定 `0.5` 阈值，不抽真随机。含 `prob` 的演示结果不代表真实随机行为。
-- **`scale_mem` 回执语义未核对**，当前恒写 0，只验证不崩。
+- 执行器以 **Windows x64 产物二进制**随仓发布，实现源码不在本仓。单条运行输出 JSON 回执（`ret_value` 与全部记忆副作用），判据判读规则见 `run_all.py`。
+- 判据全部通过只说明「产物符合这些用例」。
 
 ## 许可
 
