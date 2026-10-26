@@ -59,8 +59,8 @@ def parse_line(line):
 class Comp(object):
     def __init__(self, key):
         self.key = key
-        self.scope = "per_unit"
-        self.phase = None
+        self.scope = "per_unit"  # 解析保存；执行器不实现其语义（见 format.md §二）
+        self.phase = None        # 同上
         self.ret = None          # '_slot' / '$param' / None
         self.params = []         # [(name, type)]
         self.steps = []

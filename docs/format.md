@@ -16,8 +16,8 @@
 | 声明 | 次数 | 含义 |
 |---|---|---|
 | `prim_key <NAME>` | 1 | 组件名（大写）；同一文件内**不得重复** |
-| `prim_scope <scope>` | 0..1 | `per_unit` / `per_gen`，缺省 `per_unit` |
-| `prim_phase <phase>` | 0..1 | 仅 `per_gen` 有意义（如 `pre_rules`） |
+| `prim_scope <scope>` | 0..1 | `per_unit` / `per_gen`，缺省 `per_unit`；本执行器解析并保存，**语义未实现**（一律按 `per_unit` 执行） |
+| `prim_phase <phase>` | 0..1 | 为 `per_gen` 生命周期预留（如 `pre_rules`）；本执行器仅记录，**语义未实现** |
 | `prim_ret <槽>` | 0..1 | 回执：`_局部槽` 或 `$形参`；缺省无回执 |
 | `prim_param <名> <类型>` | 0..* | 形参，**声明序 = 调用绑定序** |
 
