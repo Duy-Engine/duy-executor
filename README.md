@@ -11,6 +11,7 @@
 | 演示 | 原件 | 判据 | 结果 |
 |---|---|---|---|
 | [atbash](demos/atbash/) | [TheAlgorithms/Python](https://github.com/TheAlgorithms/Python) `ciphers/atbash.py`（MIT） | 上游 doctest ×2 + 本仓边界 ×5 | **7/7** |
+| [roman](demos/roman/) | [TheAlgorithms/Python](https://github.com/TheAlgorithms/Python) `conversions/roman_numerals.py`（MIT） | 上游 doctest ×5 + 本仓边界 ×4 | **9/9** |
 
 ## 快速开始
 
@@ -37,7 +38,7 @@ demos/<name>/
 约定三条：
 
 1. 组件唯一形参名为 `concept`（`str` 类型），对应 `cases.tsv` 第一列的输入
-2. 结果写入记忆概念 `result`
+2. 结果写入记忆概念 `rt`（2 字——长词折扣安全）
 3. 每个演示目录恰好一个 `.duy`、一个组件
 
 ## 执行器支持范围

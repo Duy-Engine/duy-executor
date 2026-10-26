@@ -9,8 +9,10 @@
     demos/<name>/original/      原件存档（可选，不参与执行）
 
 约定：
-  · 组件唯一形参名为 `concept`（str），即 cases.tsv 第一列的输入
-  · 结果写入记忆概念 `result`，执行器读它的文本与期望比对
+
+  · cases.tsv 第一列是输入。单参数组件直接取用；多参数组件按空格分隔，
+    依 prim_param 声明序绑定（num 转数值、str 原样）。
+  · 结果写入记忆概念 `rt`（2 字·引擎长词折扣安全）：有 text 比文本，有 val 比数值。
 """
 import glob
 import os
@@ -21,8 +23,7 @@ sys.path.insert(0, BASE)
 from duy_exec import parse_program, run_file, DuyError  # noqa: E402
 
 NULL = "\\N"
-RESULT_CONCEPT = "result"
-INPUT_PARAM = "concept"
+RESULT_CONCEPT = "rt"
 
 
 def demo_dirs(only=None):
@@ -49,6 +50,33 @@ def load_cases(path):
     return rows
 
 
+def bind_args(comp, raw):
+    """按 prim_param 声明序绑定输入。单参数直接取用，多参数按空格拆分。"""
+    ps = comp.params
+    if not ps:
+        return {}
+    if len(ps) == 1:
+        nm, t = ps[0]
+        return {nm: raw if t == "s" else float(raw)}
+    parts = raw.split()
+    if len(parts) != len(ps):
+        raise DuyError("输入 %r 需要 %d 个参数，实得 %d" % (raw, len(ps), len(parts)))
+    return {nm: (v if t == "s" else float(v)) for (nm, t), v in zip(ps, parts)}
+
+
+def read_result(m):
+    """读 result 概念：优先文本，其次数值。"""
+    e = m.mem_get(RESULT_CONCEPT)
+    if e is None:
+        raise DuyError("组件未写 %s 概念（与「写了空」不同）" % RESULT_CONCEPT)
+    if e.get("text") is not None:
+        return e["text"].decode("utf-8", "replace")
+    if e.get("val") is not None:
+        v = e["val"]
+        return ("%d" % int(v)) if v == int(v) else repr(v)
+    raise DuyError("%s 概念既无文本也无数值" % RESULT_CONCEPT)
+
+
 def run_demo(d):
     name = os.path.basename(d)
     duys = glob.glob(os.path.join(d, "*.duy"))
@@ -59,22 +87,21 @@ def run_demo(d):
     if len(prog) != 1:
         raise SystemExit("demos/%s 的 .duy 需恰好 1 个组件，实得 %d" % (name, len(prog)))
     key = next(iter(prog))
+    comp = prog[key]
     cases = load_cases(os.path.join(d, "cases.tsv"))
 
     print("== %s（组件 %s，%d 条用例）" % (name, key, len(cases)))
     ok = fail = 0
     for inp, exp, ln in cases:
         try:
-            _, m = run_file(duy, key, {INPUT_PARAM: inp})
-            if not m.has_concept(RESULT_CONCEPT):
-                raise DuyError("组件未写 %s 概念（与「写了空」不同）" % RESULT_CONCEPT)
-            got = m.mem_text(RESULT_CONCEPT).decode("utf-8", "replace")
+            _, m = run_file(duy, key, bind_args(comp, inp))
+            got = read_result(m)
         except DuyError as e:
             print("  ERROR  line %-3d %-16r %s" % (ln, inp, e))
             fail += 1
             continue
         good = got == exp
-        print("  %-4s  %-16r -> %-16r" % ("OK" if good else "FAIL", inp, got)
+        print("  %-4s  %-16r -> %-12r" % ("OK" if good else "FAIL", inp, got)
               + ("" if good else "  expect %r" % exp))
         if good:
             ok += 1
